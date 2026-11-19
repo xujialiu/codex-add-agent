@@ -10,7 +10,11 @@ An AI agent that follows the runbook to configure and verify Codex on the user's
 
 **Codex home**
 
-The directory that holds the user settings and account state for the Codex instance the setup agent is configuring.
+The directory a Codex instance uses for its account state and effective configuration.
+
+**Configuration source**
+
+The user configuration file where Codex settings are saved for future launches.
 
 **Third-party model**
 
