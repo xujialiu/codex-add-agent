@@ -42,7 +42,7 @@ The default setup reads Pi's stored `zai-coding-cn` API key from `auth.json` and
 
 The installer runs the offline test and an isolated trial that switches from GPT to the third-party model and back. It backs up an existing configuration source to `model-router\config.before.toml` and writes the top-level `openai_base_url` setting. For OpenAI API-key sign-in it also adds `model_catalog_json` for a merged GPT and third-party catalog. The exact settings are saved in `model-router\codex-routing.toml`. [Codex routing configuration](https://learn.chatgpt.com/docs/config-file/config-advanced) · [Model catalog settings](https://learn.chatgpt.com/docs/enterprise/roll-out-a-gateway#model-catalog-reference)
 
-Task Scheduler starts the router at sign-in. A three-minute trigger starts it again when the previous instance has exited.
+Task Scheduler starts the router at sign-in. A three-minute trigger starts it again when the previous instance has exited. The installer builds a Windows launcher that starts Node.js without a console window. [Launcher source](../scripts/windows-router-launcher.cs)
 
 ## 3. Verify from your usual launcher
 
@@ -53,7 +53,9 @@ Get-ScheduledTask -TaskName 'Codex model router *' | Select-Object TaskName, Sta
 curl.exe --fail --silent --show-error --noproxy 127.0.0.1 http://127.0.0.1:60069/health
 ```
 
-The task should be `Running` and health should return `"ok":true` and the selected model ID. The default ID is `glm-5.3-flash`. Open a fresh Codex session in your usual launcher and check that both models are selectable in `/model`. [Same-session check](reference-router.md#check-same-session-switching)
+The task should be `Running` and health should return `"ok":true` and the selected model ID. The default ID is `glm-5.3-flash`. The router should start without opening a Windows Terminal window or tab, even briefly, at sign-in, during automatic recovery, and when started with `Start-ScheduledTask`.
+
+Open a fresh Codex session in your usual launcher and check that both models are selectable in `/model`. [Same-session check](reference-router.md#check-same-session-switching)
 
 ## 4. Troubleshoot
 

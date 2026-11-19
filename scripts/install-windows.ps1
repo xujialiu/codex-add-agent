@@ -90,6 +90,7 @@ $configPath = Join-Path $configDir 'config.toml'
 $keyPath = Join-Path $installDir 'provider.key'
 $routerConfigPath = Join-Path $installDir 'router.json'
 $nodeRouter = Join-Path $installDir 'router.mjs'
+$launcher = Join-Path $installDir 'router-launcher.exe'
 $statusLog = Join-Path $installDir 'service.jsonl'
 $trialDir = Join-Path $installDir 'trial'
 $trialAuth = Join-Path $trialDir 'auth.json'
@@ -134,8 +135,6 @@ function Test-Health {
         return $false
     }
 }
-
-function Quote-PowerShell([string] $Value) { "'" + $Value.Replace("'", "''") + "'" }
 
 Write-Host "$version, $authMode sign-in, $codexDir"
 $null = New-Item -ItemType Directory -Path $installDir
@@ -211,14 +210,10 @@ try {
     if ($proxyEnv.Count) { $routerConfig.proxyEnv = $proxyEnv }
     Write-Json $routerConfigPath $routerConfig
 
-    $launch = '& ' + (Quote-PowerShell $node) + ' ' + (Quote-PowerShell $nodeRouter) + ' ' +
-        (Quote-PowerShell $routerConfigPath) + '; exit $LASTEXITCODE'
-    $taskAction = @{
-        Execute = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-        WorkingDirectory = $installDir
-        Argument = '-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -Command "' + $launch + '"'
-    }
-    $action = New-ScheduledTaskAction @taskAction
+    $compiler = Join-Path $env:SystemRoot 'Microsoft.NET\Framework\v4.0.30319\csc.exe'
+    & $compiler /nologo /target:winexe "/out:$launcher" (Join-Path $PSScriptRoot 'windows-router-launcher.cs')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not build the Windows model router launcher.' }
+    $action = New-ScheduledTaskAction -Execute $launcher -WorkingDirectory $installDir -Argument ('"{0}"' -f $node)
     $principal = New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType Interactive -RunLevel Limited
     $trigger = New-ScheduledTaskTrigger -AtLogOn -User $identity.Name
     $recoveryTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(3) -RepetitionInterval (New-TimeSpan -Minutes 3)
