@@ -7,11 +7,11 @@ Add a third-party model alongside GPT in Codex's `/model` picker. A local router
 | Platform | Guide | Runs the router with |
 | --- | --- | --- |
 | Windows | [Windows setup](docs/windows.md) | PowerShell installer and Task Scheduler |
-| macOS | [macOS setup](docs/macos.md) | Bash setup and a LaunchAgent |
+| macOS | [macOS setup](docs/macos.md) | Bash installer and a LaunchAgent |
 
 ## Repository layout
 
 - `docs/` contains the platform runbooks, shared verification steps, and routing decision. [Router reference](docs/reference-router.md) · [Routing decision](docs/adr/0001-use-a-local-model-router.md)
 - `router/` contains the router, model catalog, and offline test. [Run the test](docs/reference-router.md#run-the-offline-test)
-- `scripts/` contains the Windows installer and live checker. [Windows installer](scripts/Install-Windows.ps1)
+- `scripts/` contains the platform installers and their shared live checker. [Windows installer](scripts/install-windows.ps1) · [macOS installer](scripts/install-macos.sh)
 - `GLOSSARY.md` defines the terms used across both guides. [Glossary](GLOSSARY.md)

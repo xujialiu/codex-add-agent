@@ -1,12 +1,24 @@
 # Set up the model router on macOS
 
-Use Bash to add a third-party model to Codex's `/model` picker and run the router as a per-user LaunchAgent.
+Use the Bash installer to add a third-party model to Codex's `/model` picker and run the router as a per-user LaunchAgent.
 
 The baseline is macOS, Codex CLI 0.170.0, Node.js 22.23.2, and GPT authenticated through ChatGPT sign-in. The source installation verified GPT → GLM 5.3 Flash → GPT with a short text conversation on November 19, 2026. This runbook adapts that setup to a private key file and includes a separate OpenAI API-key variant. Recheck discovery and transport with any other Codex version.
 
 [Terminology](../GLOSSARY.md) · [Routing decision](adr/0001-use-a-local-model-router.md) · [Reference router and offline test](reference-router.md)
 
-## 1. Identify the target and gather inputs
+## Install with the script
+
+Use Node.js and a Codex CLI with file-backed sign-in. Run this from the repository root in the launch environment of the Codex account you want to configure. Supply the path to a provider key file outside the repo, owned by your user with mode `0600` or `0400`. [Installer source](../scripts/install-macos.sh)
+
+```bash
+bash scripts/install-macos.sh --provider-key-file "$HOME/.config/codex-provider-keys/zai.key"
+```
+
+The installer detects the sign-in mode, installs the LaunchAgent, and runs an isolated GPT → GLM 5.3 Flash → GPT trial before updating `config.toml`. Open a fresh Codex session from your usual launcher after it finishes. Run `bash scripts/install-macos.sh --help` to choose a different model, provider, or port.
+
+## Manual setup
+
+### 1. Identify the target and gather inputs
 
 Work in the launch environment of the Codex account the user wants to configure. In an Orca-managed account, resolve the account's active `CODEX_HOME` from that environment. The default CLI uses `~/.codex`. Use one home and one third-party model per install. Run the shell snippets in Bash in the same terminal so values carry forward.
 
@@ -42,7 +54,7 @@ Have the user put the third-party key alone in the private file. Work with its p
 
 For a new provider, confirm that the key enables the exact model and that the endpoint accepts Responses requests and streams Responses SSE events. A Chat Completions–only endpoint requires a protocol adapter. Verify advertised capabilities such as reasoning effort, image input, or tool calls before listing them. During switching, the selected provider receives the plaintext context and tool outputs included in its turn. Use a fresh conversation with synthetic data for verification.
 
-## 2. Prepare the router and catalogs
+### 2. Prepare the router and catalogs
 
 Choose an unused loopback port. Replace the example key path and set the auth mode you confirmed above. Create the install directory for a fresh setup. If it already exists, inspect and reuse the existing install or resolve the conflict before writing files.
 
@@ -102,7 +114,7 @@ NODE
 "$node_bin" --test "$router_dir/router.test.mjs"
 ```
 
-## 3. Prove same-session switching
+### 3. Prove same-session switching
 
 Start the router in a separate terminal or PTY with the resolved absolute paths for `node_bin` and `router_dir`. Keep it running during the trial and confirm its listening event.
 
@@ -133,7 +145,7 @@ ChatGPT sign-in discovers the merged catalog through the router. The API-key var
 
 Check that `trial-models.json` includes both models. In the trial Codex session, verify that both are selectable and that switching models preserves the conversation. [Same-session check](reference-router.md#check-same-session-switching)
 
-## 4. Persist the verified setup
+### 4. Persist the verified setup
 
 Exit the trial Codex session and stop its foreground router. Use a LaunchAgent unique to this Codex home. Generate the plist with absolute paths, then load it and check health before pointing Codex at it. For a retry, inspect existing service and config state first.
 
@@ -171,6 +183,8 @@ Use `launchctl print "$launch_domain/$launch_label"`, `/health`, and the two log
 
 ## Roll back
 
+The installer prints the LaunchAgent service target and plist path. Its router files are in `model-router/` under the selected Codex home.
+
 1. Compare the edited routing keys with `codex-routing.toml`. Remove the entries introduced by this install, or restore their previous values from the backup if the installation deliberately replaced any. Preserve later unrelated edits.
 2. Restart Codex and confirm a direct GPT turn succeeds.
-3. Unload the service with `launchctl bootout "$launch_domain/$launch_label"`. Move its plist out of `~/Library/LaunchAgents` to disable it on the next login. Keep the private installation files and config backup for inspection.
+3. Run `launchctl bootout` with the service target, such as `"$launch_domain/$launch_label"` from the manual setup. Move its plist out of `~/Library/LaunchAgents` to disable it on the next login. Keep the private installation files and config backup for inspection.

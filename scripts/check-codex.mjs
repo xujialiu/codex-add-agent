@@ -98,7 +98,10 @@ async function check() {
     } while (cursor);
     const gptId = options.gptModel || config.model || entries.find(entry => entry.isDefault)?.model;
     const gpt = entries.find(entry => entry.model === gptId);
-    if (!gpt || !gpt.model.startsWith('gpt-')) throw new Error('Select an available GPT model with -GptModel');
+    if (!gpt || !gpt.model.startsWith('gpt-')) {
+      const flag = process.platform === 'win32' ? '-GptModel' : '--gpt-model';
+      throw new Error('Select an available GPT model with ' + flag);
+    }
     if (mode === 'preflight') {
       console.log(JSON.stringify({ gptModel: gpt.model }));
       return;

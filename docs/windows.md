@@ -23,10 +23,10 @@ node --version
 
 ## 2. Install
 
-Run the installer from the repository root. [Installer source](../scripts/Install-Windows.ps1)
+Run the installer from the repository root. [Installer source](../scripts/install-windows.ps1)
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-Windows.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
 ```
 
 The default setup reads Pi's stored `zai-coding-cn` API key from `auth.json` and uses `https://open.bigmodel.cn/api/v1` as the BigModel Coding Plan Responses base. It chooses the first set directory from `PI_CODING_AGENT_DIR` and `ORCA_PI_SOURCE_AGENT_DIR`, with `%USERPROFILE%\.pi\agent` as the fallback. The installer copies the key to `model-router\provider.key` and restricts access to the current user. [BigModel Codex integration](https://docs.bigmodel.cn/cn/coding-plan/tool/codex)

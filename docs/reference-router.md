@@ -28,4 +28,4 @@ Run the test from the repository root.
 node --test router/router.test.mjs
 ```
 
-The test uses synthetic keys and loopback upstreams. It checks catalog discovery and refresh, both OpenAI auth routes, credential isolation, key rotation, history filtering, compression, SSE framing, and HTTP upgrade fallback. The Windows installer also runs a live test with the selected account. [Offline test](../router/router.test.mjs) · [Windows live test](../scripts/check-codex.mjs)
+The test uses synthetic keys and loopback upstreams. It checks catalog discovery and refresh, both OpenAI auth routes, credential isolation, key rotation, history filtering, compression, SSE framing, and HTTP upgrade fallback. Both installers also run a live test with the selected account. [Offline test](../router/router.test.mjs) · [Live checker](../scripts/check-codex.mjs)
