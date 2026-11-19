@@ -1,0 +1,3 @@
+# Use a local model router for same-session switching
+
+Codex 0.170.0 selects a provider for a new chat, and `/model` selects a model within the current chat. We keep the built-in OpenAI provider and point it at a loopback router so one picker can list GPT and a third-party model, with each turn using the selected model's upstream and credential. The router becomes a local dependency for both models, and a provider switch sends the conversation context required for the new turn to the selected provider. [Codex 0.170.0 provider selection](https://github.com/openai/codex/blob/rust-v0.170.0/codex-rs/tui/src/app/provider.rs), [Codex configuration](https://learn.chatgpt.com/docs/config-file/config-advanced)
