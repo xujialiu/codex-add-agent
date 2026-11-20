@@ -20,6 +20,12 @@ Confirm that the replies stream and that the router logs successful `openai` →
 
 For a coding check, ask the third-party model to use a shell tool to print a synthetic marker in a disposable directory. Confirm that the tool exited successfully and returned the marker. Image input, long threads, and compaction need separate checks when used.
 
+## Check native delegation
+
+Start a fresh GPT session and ask it to “use `glm-5.3-flash` as a subagent to calculate 137 × 29, wait for it, and report its answer.” The native agent trace should show the GLM child completing with `3973`. The installation trial checks the child model, its completion message and the parent reply using a random marker.
+
+Codex 0.171.0 encrypts the task argument in its v2 collaboration tools. The router selects Codex's native v1 tools for catalog entries that advertise v2 so a third-party child receives its assignment as ordinary user input. GPT children in those sessions also use the v1 workflow. An explicit `features.multi_agent_v2 = true` overrides the catalog choice. Use the catalog default in sessions that delegate to GLM. [Codex v1 and v2 task schemas](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/src/tools/handlers/multi_agents_spec.rs#L608-L657) · [Codex version selection](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/src/config/mod.rs#L1780-L1807)
+
 ## Run the offline test
 
 Run the test from the repository root.

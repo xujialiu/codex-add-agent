@@ -192,7 +192,7 @@ if (openaiAuth === 'api-key') {
     throw new Error('Choose a GPT model in the bundled OpenAI API catalog with --gpt-model');
   }
   options.mergedFile = join(dir, 'merged-models.json');
-  writeJson(options.mergedFile, { ...bundled, models: [...bundled.models, model] });
+  execFileSync(node, [join(repo, 'router/router.mjs'), '--merge-catalog', bundledFile, catalog, options.mergedFile]);
   routing.push('model_catalog_json = ' + JSON.stringify(options.mergedFile));
 }
 writeFileSync(join(dir, 'codex-routing.toml'), routing.join('\n') + '\n\n');

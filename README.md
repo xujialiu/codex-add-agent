@@ -1,6 +1,6 @@
 # Add an API-key-backed model to Codex
 
-Add a third-party model alongside GPT in Codex's `/model` picker. A local router sends each turn to the selected provider so you can switch models in the same conversation. Both setup guides use GLM 5.3 Flash as the example.
+Add a third-party model alongside GPT in Codex's `/model` picker. You can switch models in the same conversation or keep GPT as the parent and ask it to delegate a task to GLM 5.3 Flash using a native Codex subagent. [Check native delegation](docs/reference-router.md#check-native-delegation)
 
 ## Setup
 

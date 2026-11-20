@@ -34,7 +34,7 @@ test('serves a merged catalog and streams turns using isolated credentials', asy
     calls.push({ path: req.url, headers: req.headers, body: decoded.length ? JSON.parse(decoded) : null });
     if (req.url.startsWith('/chatgpt/models?')) {
       res.setHeader('content-type', 'application/json');
-      return res.end(JSON.stringify({ models: [{ slug: 'gpt-live' }] }));
+      return res.end(JSON.stringify({ models: [{ slug: 'gpt-live', multi_agent_version: 'v2' }] }));
     }
     res.setHeader('content-type', 'text/event-stream');
     res.write('data: {"type":"response.output_text.delta","delta":"OK"}\n\n');
@@ -42,7 +42,7 @@ test('serves a merged catalog and streams turns using isolated credentials', asy
   }));
   const files = {
     providerCatalogFile: { models: [{ slug: 'external-test' }] },
-    fallbackCatalogFile: { models: [{ slug: 'gpt-bundled' }] },
+    fallbackCatalogFile: { models: [{ slug: 'gpt-bundled', multi_agent_version: 'v2' }] },
   };
   const config = {
     pathPrefix: '/test-only-random-prefix-for-router',
@@ -61,7 +61,9 @@ test('serves a merged catalog and streams turns using isolated credentials', asy
   const auth = { authorization: 'Bearer example-chatgpt-token', 'chatgpt-account-id': 'example-account' };
   const catalog = async () => {
     const response = await fetch(base + '/models?client_version=test', { headers: auth });
-    return (await response.json()).models.map(model => model.slug);
+    const { models } = await response.json();
+    assert.equal(models[0].multi_agent_version, 'v1', 'GPT must send readable native subagent tasks');
+    return models.map(model => model.slug);
   };
   assert.deepEqual(await catalog(), ['gpt-bundled', 'external-test']);
   let slugs;

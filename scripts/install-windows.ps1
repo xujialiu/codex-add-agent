@@ -161,9 +161,9 @@ try {
     if ($bundled.models.slug -contains $providerModel) { throw 'The provider model ID is already in the OpenAI catalog.' }
     if ($authMode -eq 'api-key') {
         if ($bundled.models.slug -notcontains $options.gptModel) { throw 'Use an API GPT model included in the bundled catalog.' }
-        $bundled.models = @($bundled.models) + $providerModels
         $options.mergedFile = Join-Path $installDir 'merged-models.json'
-        Write-Json $options.mergedFile $bundled
+        & $node (Join-Path $repo 'router\router.mjs') --merge-catalog $options.bundledFile $providerCatalogPath $options.mergedFile
+        if ($LASTEXITCODE -ne 0) { throw 'Could not merge the API model catalog.' }
     }
 
     & $node --test (Join-Path $repo 'router\router.test.mjs')

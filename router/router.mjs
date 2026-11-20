@@ -1,6 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
-import { appendFileSync, closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from 'node:fs';
+import { appendFileSync, closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import * as zlib from 'node:zlib';
 
@@ -101,6 +101,13 @@ function upstreamRequest(url, options, body) {
   });
 }
 
+function mergeCatalog(catalog, model) {
+  // Codex v2 encrypts delegated tasks for OpenAI. The native v1 tools deliver ordinary user input.
+  const models = [...catalog.models.filter(entry => entry.slug !== model.slug), model]
+    .map(entry => entry.multi_agent_version === 'v2' ? { ...entry, multi_agent_version: 'v1' } : entry);
+  return { ...catalog, models };
+}
+
 export function createRouter(config, { openaiBases = OPENAI_BASES, log = () => {} } = {}) {
   if (!Object.hasOwn(openaiBases, config.openaiAuth)) throw new Error('Unknown OpenAI auth mode');
   if (!/^\/[A-Za-z0-9_-]{24,}$/.test(config.pathPrefix)) throw new Error('Invalid local path prefix');
@@ -113,7 +120,6 @@ export function createRouter(config, { openaiBases = OPENAI_BASES, log = () => {
   const requestUpstream = (url, options, body) =>
     upstreamRequest(url, { ...options, agent: url.protocol === 'https:' ? httpsAgent : undefined }, body);
   const catalogs = new Map();
-  const merge = catalog => ({ ...catalog, models: [...catalog.models.filter(item => item.slug !== model.slug), model] });
 
   function getCatalog(req, url) {
     const identity = createHash('sha256')
@@ -121,7 +127,7 @@ export function createRouter(config, { openaiBases = OPENAI_BASES, log = () => {
       .digest('hex');
     if (!catalogs.has(identity)) {
       if (catalogs.size >= 16) catalogs.delete(catalogs.keys().next().value);
-      catalogs.set(identity, { catalog: merge(fallback), checkedAt: 0, refreshing: false });
+      catalogs.set(identity, { catalog: mergeCatalog(fallback, model), checkedAt: 0, refreshing: false });
     }
     const cached = catalogs.get(identity);
     if (!cached.refreshing && Date.now() - cached.checkedAt >= 300_000) {
@@ -134,7 +140,7 @@ export function createRouter(config, { openaiBases = OPENAI_BASES, log = () => {
           const bytes = await collect(response, 32 * 1024 * 1024);
           if (response.statusCode === 200) {
             const catalog = JSON.parse(decodeBody(bytes, response.headers['content-encoding']));
-            if (Array.isArray(catalog.models) && catalog.models.length) cached.catalog = merge(catalog);
+            if (Array.isArray(catalog.models) && catalog.models.length) cached.catalog = mergeCatalog(catalog, model);
           }
         } catch {
           // Serve the last good catalog during an upstream failure.
@@ -217,7 +223,12 @@ export function createRouter(config, { openaiBases = OPENAI_BASES, log = () => {
   return server;
 }
 
-if (import.meta.main) {
+if (import.meta.main && process.argv[2] === '--merge-catalog') {
+  const [bundled, provider, output] = process.argv.slice(3);
+  const read = file => JSON.parse(readFileSync(file, 'utf8'));
+  const catalog = mergeCatalog(read(bundled), read(provider).models[0]);
+  writeFileSync(output, JSON.stringify(catalog) + '\n', { flag: 'wx', mode: 0o600 });
+} else if (import.meta.main) {
   const config = JSON.parse(readFileSync(process.argv[2], 'utf8'));
   const url = new URL(config.providerBase);
   if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {

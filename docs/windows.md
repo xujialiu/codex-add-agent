@@ -55,7 +55,7 @@ curl.exe --fail --silent --show-error --noproxy 127.0.0.1 http://127.0.0.1:60069
 
 The task should be `Running` and health should return `"ok":true` and the selected model ID. The default ID is `glm-5.3-flash`. The router should start without opening a Windows Terminal window or tab, even briefly, at sign-in, during automatic recovery, and when started with `Start-ScheduledTask`.
 
-Open a fresh Codex session in your usual launcher and check that both models are selectable in `/model`. [Same-session check](reference-router.md#check-same-session-switching)
+Open a fresh Codex session in your usual launcher, check that both models are selectable in `/model`, and ask GPT to delegate a task to GLM. [Same-session check](reference-router.md#check-same-session-switching) · [Native delegation check](reference-router.md#check-native-delegation)
 
 ## 4. Troubleshoot
 

@@ -128,18 +128,24 @@ async function checkTurns(request, notifications, gpt, external) {
   });
   const marker = 'ROUTER-' + randomBytes(5).toString('hex');
 
-  async function turn(model, prompt, expected, expectedToolOutput) {
+  async function turn(model, prompt, expected, expectedToolOutput, childModel) {
     const completed = new AbortController();
     const messages = new Map();
     const commands = [];
+    const agentCalls = [];
     const receive = ({ threadId, turnId, item }) => {
       if (threadId !== thread.id) return;
       if (item.type === 'agentMessage') messages.set(turnId, item.text);
+      if (item.type === 'collabAgentToolCall') agentCalls.push(item);
       if (expectedToolOutput && item.type === 'commandExecution') {
         commands.push({ turnId, exitCode: item.exitCode, matched: item.aggregatedOutput?.includes(expectedToolOutput) });
       }
     };
     notifications.on('rpc/item/completed', receive);
+    const finishParent = event => {
+      if (event.threadId === thread.id) notifications.emit('parentTurnCompleted', event);
+    };
+    notifications.on('rpc/turn/completed', finishParent);
     const timer = setTimeout(() => completed.abort(), 150_000);
     try {
       const [{ turn: started }, [event]] = await Promise.all([
@@ -147,7 +153,7 @@ async function checkTurns(request, notifications, gpt, external) {
           threadId: thread.id, model: model.model, effort: model.defaultReasoningEffort,
           input: [{ type: 'text', text: prompt }],
         }),
-        once(notifications, 'rpc/turn/completed', { signal: completed.signal }),
+        once(notifications, 'parentTurnCompleted', { signal: completed.signal }),
       ]);
       if (event.threadId !== thread.id || event.turn.id !== started.id || event.turn.status !== 'completed') {
         const info = event.turn.error?.codexErrorInfo;
@@ -163,6 +169,15 @@ async function checkTurns(request, notifications, gpt, external) {
       } else if (messages.get(started.id)?.trim() !== expected) {
         throw new Error('The reply did not match the test marker');
       }
+      if (childModel) {
+        const children = agentCalls.filter(call => call.tool === 'spawnAgent' && call.model === childModel &&
+          call.status === 'completed').flatMap(call => call.receiverThreadIds);
+        if (!children.some(id => agentCalls.some(call => call.agentsStates[id]?.status === 'completed' &&
+          call.agentsStates[id].message?.trim() === expected))) {
+          throw new Error('No completed ' + childModel + ' subagent returned the marker');
+        }
+        console.log('Verified native subagent: ' + model.model + ' -> ' + childModel);
+      }
       console.log('Verified streamed turn: ' + model.model);
       if (expectedToolOutput) console.log('Verified shell tool execution: ' + model.model);
     } catch (error) {
@@ -171,6 +186,7 @@ async function checkTurns(request, notifications, gpt, external) {
       clearTimeout(timer);
       completed.abort();
       notifications.off('rpc/item/completed', receive);
+      notifications.off('rpc/turn/completed', finishParent);
     }
   }
 
@@ -179,8 +195,15 @@ async function checkTurns(request, notifications, gpt, external) {
       "'. After the command succeeds, reply exactly TOOL_READY.", 'TOOL_READY', marker);
     return;
   }
-  await turn(gpt, 'Remember the marker ' + marker + '. Reply exactly GPT_READY.', 'GPT_READY');
-  const recall = 'What marker did I give you? Reply with just the marker.';
-  await turn(external, recall, marker);
-  await turn(gpt, recall, marker);
+  if (mode !== 'subagent') {
+    await turn(gpt, 'Remember the marker ' + marker + '. Reply exactly GPT_READY.', 'GPT_READY');
+    const recall = 'What marker did I give you? Reply with just the marker.';
+    await turn(external, recall, marker);
+    await turn(gpt, recall, marker);
+  }
+  const childMarker = 'CHILD-' + randomBytes(5).toString('hex');
+  await turn(gpt, 'Use the native spawn_agent tool with model ' + external.model +
+    ' and no parent history. Ask the child to reply exactly ' + childMarker +
+    '. Use the native wait tool to get the completed child result. Reply with exactly the child result.',
+    childMarker, undefined, external.model);
 }
